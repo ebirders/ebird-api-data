@@ -477,6 +477,9 @@ class APILoader:
                 self.add_checklist(identifier)
                 added += 1
 
+        self.run_filters()
+        self.publish()
+
         logger.info("Checklists added: %d ", added)
         logger.info("Adding checklists completed")
 

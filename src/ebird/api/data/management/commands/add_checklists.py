@@ -119,6 +119,3 @@ class Command(BaseCommand):
         for region in options["regions"]:
             for date in dates:
                 loader.add_checklists(region, date)
-
-        loader.run_filters()
-        loader.publish()
