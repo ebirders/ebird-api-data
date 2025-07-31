@@ -30,6 +30,36 @@ class Filter(models.Model):
         help_text=_("The species used to find matching Observations."),
     )
 
+    country = models.ForeignKey(
+        "data.Country",
+        blank=True,
+        null=True,
+        related_name="filtered_on",
+        on_delete=models.PROTECT,
+        verbose_name=_("country"),
+        help_text=_("The country where the observation was made."),
+    )
+
+    state = models.ForeignKey(
+        "data.State",
+        blank=True,
+        null=True,
+        related_name="filtered_on",
+        on_delete=models.PROTECT,
+        verbose_name=_("state"),
+        help_text=_("The state where the observation was made."),
+    )
+
+    county = models.ForeignKey(
+        "data.County",
+        blank=True,
+        null=True,
+        related_name="filtered_on",
+        on_delete=models.PROTECT,
+        verbose_name=_("county"),
+        help_text=_("The county where the observation was made."),
+    )
+
     location = models.ForeignKey(
         "data.Location",
         blank=True,
@@ -68,7 +98,14 @@ class Filter(models.Model):
 
         if self.species:
             filters &= models.Q(species=self.species)
-        if self.location:
+
+        if self.country:
+            filters &= models.Q(country=self.country)
+        elif self.state:
+            filters &= models.Q(state=self.state)
+        elif self.county:
+            filters &= models.Q(county=self.county)
+        elif self.location:
             filters &= models.Q(location=self.location)
 
         for observation in Observation.objects.filter(filters):

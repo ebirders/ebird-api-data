@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest
 
+- Expended Filter so species can be updated for observations within a country, 
+  state, or county.
+
 ## 0.3.7 (2025-07-26)
 
 - Removed the list filter for protocols in the Checklist Admin. 
