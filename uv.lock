@@ -320,7 +320,6 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "django" },
     { name = "ebird-api-requests" },
-    { name = "ebird-codes" },
     { name = "lxml" },
 ]
 
@@ -351,7 +350,6 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.3" },
     { name = "django", specifier = ">=4.2" },
     { name = "ebird-api-requests", specifier = "==4.0.2" },
-    { name = "ebird-codes", specifier = ">=0.0.2" },
     { name = "lxml", specifier = ">=6.0.0" },
 ]
 
@@ -382,15 +380,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6d/4b/78fff41a882f18eca6bda94c27b30d2fced1f02da3aab4298cf6aafee113/ebird_api_requests-4.0.2.tar.gz", hash = "sha256:b6853e36a8a0cb5dbd466f842483de0820b7173863e14e447818cf3d1fc6b9fc", size = 25044, upload-time = "2025-08-03T10:06:24.404Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9a/45/914d686aa110dad6e57430ff9fa724196036c8addb144d7158073de636bc/ebird_api_requests-4.0.2-py3-none-any.whl", hash = "sha256:f30f591832a204191958921cffc49e12c0186b55e16ca469cf7bea42991d22e9", size = 26696, upload-time = "2025-08-03T10:06:22.729Z" },
-]
-
-[[package]]
-name = "ebird-codes"
-version = "0.0.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bb/2d/b130de7fcdc28c43c961e6fcb86e70ff137b160838b91a4961c582b3163c/ebird_codes-0.0.2.tar.gz", hash = "sha256:c7e956ce86e85d0729969b3e444abd260e432090a195db7e2d8a15e36dd86084", size = 5570, upload-time = "2025-02-14T16:12:14.467Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/d7/f17a061230139b4e587a43e4ece706470c1661759da8bcc865e24cfa4ab2/ebird_codes-0.0.2-py3-none-any.whl", hash = "sha256:854e0549e1eb520145d9ad701ca227c993f16505471b16ed97f2d7ea7de2d1df", size = 5451, upload-time = "2025-02-14T16:12:12.433Z" },
 ]
 
 [[package]]
