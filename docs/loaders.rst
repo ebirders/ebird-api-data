@@ -42,7 +42,7 @@ Now, it is time to load some checklists:
 
 .. code-block:: console
 
-    python manage.py add_checklists --days 7 US-NY-109
+    python manage.py add_checklists --days -7 US-NY-109
 
 This will load checklists added in the past week for Tompkins county Ney York, USA,
 where the Cornell Lab of Ornithology is located. You can use any country code (US),
@@ -56,30 +56,32 @@ fetched. That way you can still download all the checklists submitted. Since
 this command only downloads checklists that don't already exist in the database
 you can run it frequently and be sure you are getting all the submissions.
 
-You automate running the command using a scheduler such as cron. If you use the
-absolute paths to python and the command, then you don't need to deal with
+You can automate running the command using a scheduler such as cron. If you use
+the absolute paths to python and the command, then you don't need to deal with
 activating the virtual environment, for example:
 
 .. code-block:: console
 
-    # Every 4 hours, load all new checklists, for New York state, submitted for the past week
-    0 */4 * * * /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --days 7 US-NY
+    # Every Sunday, at 11:00 pm, load all checklists, submitted in the past week, for New York state
+    0 11 * * 0 /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --days -7 US-NY
 
 That way you can be pretty sure you're getting all the observations for a region.
 
-IMPORTANT: The loader currently only loads new checklists. It does not update
-existing ones. The reason is that only about 1% of submitted checklists are updated,
-and because of the limitations of the eBird API, you can only find out if a checklist
-has changed by downloading it. So, to pick up all the changes you have to repeatedly
-download all the checklists for a given period in case something changed. That is
-more or less practical for small windows of time, for example, the past three days.
-However, you are still downloading hundreds or maybe thousands of checklist to pick
-up the handful which were edited. For larger windows it becomes really expensive in
-terms of load on the eBird servers. They also have to pay for the network connections
-and bandwidth too. You can't download everything, all the time, in case something
-changed. You should really treat the API as a news service, and accept that there
-will be gaps in the data. For accuracy and completeness, sign up to get access to
-the eBird Basic Dataset, which is published on the 15th of each month.
+IMPORTANT: The loader adds new checklists and updates existing ones. However, only
+about 1% of submitted checklists are updated, and because of the limitations of the
+eBird API, you can only find out if a checklist has changed by downloading it. If
+you run updates every hour, for example, you are repeatedly downloading hundreds
+or thousands of checklist just to find the handful which were updated.
+
+To avoid this, use the '--new-only' flag to only add new checklists. Run a full
+update once a day, for a small number of days. That way you can pick up most of
+the changes. You are unlikely to catch moderator requested changes but you will
+catch most cases where the observer has made misidentification or entered the
+wrong species.
+
+You should really treat the API as a news service, and accept that there will be
+gaps in the data. For accuracy and completeness, sign up to get access to the eBird
+Basic Dataset, which is published on the 15th of each month.
 
 Using cron, you can schedule running the add_checklists management command, to pick up
 most of the submissions:
@@ -87,12 +89,13 @@ most of the submissions:
 .. code-block:: console
 
     # Every hour, load new checklists submitted today
-    0 * * * * /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --days 1 US-NY
+    0 * * * * /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --new-only US-NY
     # Every 4 hours, load new checklists submitted today and yesterday
-    0 */4 * * * /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --days 2 US-NY
+    0 */4 * * * /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --days -2 --new-only US-NY
+    # Every day at 11:45 pm, load all checklists submitted in the previous two days
+    45 11 * * * /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --days -2 US-NY
     # Every day at midnight, load new checklists submitted in the past week
-    0 0 * * * /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --days 7 US-NY
-
+    0 0 * * * /home/me/my-project/.venv/bin/python /home/me/my-project/manage.py add_checklists --days -7 --new-only US-NY
 
 This schedule, or something similar, should ensure that the database contains the
 majority of the checklists that eBird has.

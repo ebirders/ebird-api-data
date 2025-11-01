@@ -112,7 +112,7 @@ EBIRD_API_KEY=<my api key>
 Now, download data from the API:
 
 ```shell
-python manage.py add_checklists --days 2 US-NY-109
+python manage.py add_checklists --days -2 US-NY-109
 ```
 
 This loads all the checklists, submitted in the past two days by birders in

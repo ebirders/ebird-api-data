@@ -489,9 +489,9 @@ class APILoader:
 
         return visits
 
-    def add_checklists(self, region: str, date: dt.date) -> None:
+    def add_checklists(self, region: str, date: dt.date, update=True) -> None:
         """
-        Add all the checklists submitted for a region for a given date.
+        Add or update all the checklists submitted for a region for a given date.
 
         Arguments:
             region: The code for a national, subnational1, subnational2
@@ -499,6 +499,8 @@ class APILoader:
                  US-NY-109, or L1379126, respectively.
 
             date: The date the observations were made.
+
+            update: Update existing checklists. Default is True.
 
         """
 
@@ -510,22 +512,20 @@ class APILoader:
 
         for visit in visits:
             data = visit["loc"]
-            identifier = data["locId"]
-            if not Location.objects.filter(identifier=identifier).exists():
-                self.add_location(data)
-
-        added: int = 0
+            self.add_location(data)
 
         for visit in visits:
             identifier = visit["subId"]
-            if not Checklist.objects.filter(identifier=identifier).exists():
-                self.add_checklist(identifier)
-                added += 1
+            if (
+                not update
+                and Checklist.objects.filter(identifier=identifier).exists()
+            ):
+                continue
+            self.add_checklist(identifier)
 
         self.run_filters()
         self.publish()
 
-        logger.info("Checklists added: %d ", added)
         logger.info("Adding checklists completed")
 
     @staticmethod

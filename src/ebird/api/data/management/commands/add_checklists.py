@@ -4,27 +4,40 @@ load_api.py
 A Django management command for loading observations from the eBird API.
 
 Usage:
-    python manage.py add_checklists --date <date> <region>+
-    python manage.py add_checklists --days <n> <region>+
-    python manage.py add_checklists --date <date> --days <n> <region>+
+    python manage.py add_checklists [--date <date>] [--days <+/-n>] [--new-only] <region>+
 
 Arguments:
     --date <date> The date of the checklists to add to the database. If
         no date is given then it defaults to today.
 
-    --days <n> The number of days to include. If not given then the number
-        of days defaults to 1. That means only checklists for the date will
-        be added.
+    --days <n> The number of days to include, relative to the date. If not
+        given then the number of days defaults to 1. That means only checklists
+        for the given date (or today, if not given) will be added.
+
+    --new-only Add only new checklists. Most checklists don't change so you can
+        use this to minimise the number of calls made to the API. You should
+        update checklists periodically, for example once per day, or once per
+        week. After a week you can be pretty sure the checklist is not going
+        to change.
 
     <region> Required. One or more national, subnational1, subnational2, or hotspot
         codes used by eBird. For example, US, US-NY, US-NY-109, L1379126
 
 Examples:
-    # Load checklists added in the past week for New York state
-    python manage.py add_checklists --days 7 US-NY
+    # Add all checklist submitted today, for New York state
+    python manage.py add_checklists US-NY
+
+    # Add all checklist submitted in the past two days
+    python manage.py add_checklists --days -2 US-NY
+
+    # Add only new checklist submitted in the past two days
+    python manage.py add_checklists --days -2 --new-only US-NY
 
     # Load checklists all checklists added on the last Big Day
-    python manage.py add_checklists --date 2024-10-05 US-NY
+    python manage.py add_checklists --date 2025-10-05 US-NY
+
+    # Add all checklists submitted in October
+    python manage.py add_checklists --date 2025-10-01 --days 31 US-NY
 
 Notes:
     1. The eBird API returns a maximum of 200 results. The APILoader works
@@ -82,13 +95,19 @@ class Command(BaseCommand):
         parser.add_argument(
             "--date",
             type=lambda s: dt.datetime.strptime(s, "%Y-%m-%d"),
-            help="The number of previous days to add",
+            help="The date to add checklists for. Defaults to today.",
         )
 
         parser.add_argument(
             "--days",
             type=int,
-            help="The number of previous days to add",
+            help="The number of days to add. Defaults to 1.",
+        )
+
+        parser.add_argument(
+            "--new-only",
+            action="store_false",
+            help="Add only new checklists.",
         )
 
         parser.add_argument(
@@ -104,18 +123,17 @@ class Command(BaseCommand):
         locales: dict = getattr(settings, "EBIRD_LOCALES")
         return APILoader(key, locales)
 
-    @staticmethod
-    def get_dates(days) -> list[dt.date]:
-        today: dt.date = dt.date.today()
-        return [today - dt.timedelta(days=n) for n in range(days)]
-
     def handle(self, *args, **options):
         date = options["date"] or dt.date.today()
         days = options["days"] or 1
 
-        dates = [date - dt.timedelta(days=n) for n in range(days)]
+        if days < 0:
+            dates = [date - dt.timedelta(days=n) for n in range(abs(days))]
+        else:
+            dates = [date + dt.timedelta(days=n) for n in range(days)]
+
         loader = self.get_loader()
 
         for region in options["regions"]:
             for date in dates:
-                loader.add_checklists(region, date)
+                loader.add_checklists(region, date, options["new_only"])
