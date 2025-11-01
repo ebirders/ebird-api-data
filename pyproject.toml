@@ -13,7 +13,7 @@ requires-python = ">=3.10"
 dependencies = [
     "beautifulsoup4>=4.13.3",
     "django>=4.2",
-    "ebird-api-requests>=4.0.1",
+    "ebird-api-requests==4.0.2",
     "ebird-codes>=0.0.2",
     "lxml>=6.0.0",
 ]
