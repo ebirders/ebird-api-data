@@ -345,7 +345,7 @@ class APILoader:
         with transaction.atomic():
             data: dict = self.call_api(get_checklist, identifier)
             identifier: str = data["subId"]
-            created: dt.datetime = str2datetime(data["creationDt"])
+            added: dt.datetime = str2datetime(data["creationDt"])
             edited: dt.datetime = str2datetime(data["lastEditedDt"])
             started: dt.datetime = str2datetime(data["obsDt"])
             location: Location = Location.objects.get(identifier=data["locId"])
@@ -357,7 +357,7 @@ class APILoader:
                 return None
 
             values: dict = {
-                "created": created,
+                "added": added,
                 "edited": edited,
                 "published": False,
                 "country": location.country,
