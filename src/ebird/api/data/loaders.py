@@ -377,7 +377,6 @@ class APILoader:
 
         with transaction.atomic():
             data: dict = self.call_api(get_checklist, identifier)
-            logger.info("Downloaded checklist: %s", identifier)
             identifier: str = data["subId"]
             added: dt.datetime = str2datetime(data["creationDt"])
             edited: dt.datetime = str2datetime(data["lastEditedDt"])
@@ -473,16 +472,15 @@ class APILoader:
         )
 
         if len(results) == API_MAX_RESULTS:
-            logger.info("API result limit reached - fetching visits for subregions")
+            logger.info("API limit reached - fetching visits for subregions")
             if sub_regions := self.fetch_subregions(region):
                 for sub_region in sub_regions:
-                    logger.info("Fetching visits for sub-region: %s", sub_region)
                     visits.extend(self.fetch_visits(sub_region, date))
             else:
                 # No more sub-regions, issue a warning and return the results
                 visits.extend(results)
                 logger.warning(
-                    "Fetching visits - API limit reached: %s, %s", region, date
+                    "API limit reached - No subregions available: %s, %s", region, date
                 )
         else:
             visits.extend(results)
