@@ -193,7 +193,6 @@ class APILoader:
             "latitude": Decimal(data["latitude"]),
             "longitude": Decimal(data["longitude"]),
             "url": "https://ebird.org/region/%s" % identifier,
-            "data": {"api": data},
         }
 
         if "subnational2Code" in data:
@@ -214,7 +213,6 @@ class APILoader:
         values: dict = {
             "common_name": {},
             "family_common_name": {},
-            "data": {"api": {}},
         }
 
         for language, locale in self.locales.items():
@@ -227,7 +225,6 @@ class APILoader:
             values["scientific_name"] = data["sciName"]
             values["family_common_name"][language] = data.get("familyComName", "")
             values["family_scientific_name"] = data.get("familySciName", "")
-            values["data"]["api"][locale] = data
 
         values["common_name"] = json.dumps(values["common_name"])
         values["family_common_name"] = json.dumps(values["family_common_name"])
@@ -272,7 +269,6 @@ class APILoader:
             "video": False,
             "comments": "",
             "urn": self.get_urn(checklist.project_code, data),
-            "data": {"api": data},
         }
 
         if re.match(r"\d+", data["howManyStr"]):
@@ -378,7 +374,6 @@ class APILoader:
                 "complete": data["allObsReported"],
                 "comments": "",
                 "url": "https://ebird.org/checklist/%s" % identifier,
-                "data": {"api": data},
             }
 
             if data["obsTimeValid"]:
