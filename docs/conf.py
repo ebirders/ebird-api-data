@@ -9,7 +9,7 @@
 project = "eBird API Data"
 copyright = "2025, Stuart MacKay"
 author = "Stuart MacKay"
-release = "0.3.7"
+release = "0.4.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

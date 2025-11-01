@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest
 
+## 0.4.0 (2025-11-01)
+
 - APILoader can update existing checklists.
 
 - Expended Filter so species can be updated for observations within a country, 
