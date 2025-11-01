@@ -192,8 +192,8 @@ class APILoader:
             "state": self.get_state(data),
             "county": None,
             "hotspot": data["isHotspot"],
-            "latitude": Decimal(data["latitude"]),
-            "longitude": Decimal(data["longitude"]),
+            "latitude": round(Decimal(data["latitude"]), 7),
+            "longitude": round(Decimal(data["longitude"]), 7),
             "url": "https://ebird.org/region/%s" % identifier,
         }
 
