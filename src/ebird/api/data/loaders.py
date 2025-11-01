@@ -18,7 +18,14 @@ from django.utils.timezone import get_default_timezone
 import requests
 
 from bs4 import BeautifulSoup
-from ebird.api.requests import get_checklist, get_regions, get_taxonomy, get_visits
+from ebird.api.requests import (
+    RateLimitError,
+    get_checklist,
+    get_regions,
+    get_taxonomy,
+    get_visits,
+    set_rate_limit,
+)
 from ebird.api.requests.constants import API_MAX_RESULTS
 
 from .models import (
@@ -42,6 +49,8 @@ RETRY_LIMIT: int = 10
 RETRY_WAIT: int = 2
 # Multiplier to apply to wait time after each failed attempt
 RETRY_MULTIPLIER: float = 2.0
+# Minimum time, in seconds, between requests to the eBird API or web site
+RATE_LIMIT: float = 1.0
 
 
 def str2datetime(value: str) -> dt.datetime:
@@ -80,6 +89,11 @@ class APILoader:
         multiplier: The multiplier to apply to the wait time after each retry.
                     Defaults to RETRY_MULTIPLIER if not set.
 
+        rate_limit: The minimum time, in seconds, between requests to the
+                    eBird API, and between requests to scrape checklist web
+                    pages. Defaults to RATE_LIMIT if not set. Zero disables
+                    rate limiting.
+
     The eBird API limits the number of records returned to 200. When downloading
     the visits for a given region if 200 hundred records are returned then it is
     assumed there are more and the loader will fetch the sub-regions and download
@@ -108,6 +122,15 @@ class APILoader:
     is wrong with the network, or the eBird servers are overloaded, and you
     should stop from making the situation any worse.
 
+    The eBird API also limits how quickly requests can be made. The loader
+    sets a rate limit, using set_rate_limit() from ebird-api-requests, so
+    there is a minimum interval between requests. The limit applies to all
+    the requests made by the process. If the API responds with HTTP 429 Too
+    Many Requests, ebird-api-requests waits, retries the request and slows
+    down the rate of subsequent requests. If the request still fails, the
+    loader stops rather than adding to the load on the eBird servers. Any
+    missing checklists will be added the next time the loader is run.
+
     """
 
     def __init__(
@@ -117,6 +140,7 @@ class APILoader:
         limit: int = None,
         wait: int = None,
         multiplier: float = None,
+        rate_limit: float = None,
     ):
         self.api_key: str = api_key
         self.locales: dict = locales
@@ -124,13 +148,19 @@ class APILoader:
         self.retry_limit: int = limit if limit else RETRY_LIMIT
         self.retry_wait: int = wait if wait else RETRY_WAIT
         self.retry_multiplier: float = multiplier if multiplier else RETRY_MULTIPLIER
+        self.rate_limit: float = RATE_LIMIT if rate_limit is None else rate_limit
+        self.last_scrape: float | None = None
+        set_rate_limit(self.rate_limit)
 
     def call(self, func, *args, **kwargs):
         wait: float = float(self.retry_wait)
         while True:
             try:
                 return func(*args, **kwargs)
-            except (URLError, HTTPError) as err:
+            except RateLimitError:
+                logger.exception("Rate limit exceeded")
+                raise
+            except (URLError, HTTPError, requests.RequestException) as err:
                 logger.exception("Failed call #%d", self.retries)
                 self.retries += 1
                 if self.retries > self.retry_limit:
@@ -141,6 +171,16 @@ class APILoader:
 
     def call_api(self, func, *args, **kwargs) -> dict | list:
         return self.call(func, self.api_key, *args, **kwargs)
+
+    def scrape(self, url: str) -> requests.Response:
+        if self.rate_limit and self.last_scrape is not None:
+            delay = self.rate_limit - (time.monotonic() - self.last_scrape)
+            if delay > 0:
+                time.sleep(delay)
+        self.last_scrape = time.monotonic()
+        response = requests.get(url)
+        response.raise_for_status()
+        return response
 
     @staticmethod
     def update(obj, values: dict) -> dict[str, tuple]:
@@ -363,7 +403,7 @@ class APILoader:
         checklist_identifier: str = data["subId"]
         logger.info("Scraping checklist: %s", checklist_identifier)
         response = self.call(
-            requests.get, "https://ebird.org/checklist/%s" % checklist_identifier
+            self.scrape, "https://ebird.org/checklist/%s" % checklist_identifier
         )
         content = response.content
         soup = BeautifulSoup(content, "lxml")
@@ -552,8 +592,8 @@ class APILoader:
     def fetch_visits(self, region: str, date: dt.date):
         visits = []
 
-        results: list = get_visits(
-            self.api_key, region, date=date, max_results=API_MAX_RESULTS
+        results: list = self.call_api(
+            get_visits, region, date=date, max_results=API_MAX_RESULTS
         )
 
         if len(results) == API_MAX_RESULTS:

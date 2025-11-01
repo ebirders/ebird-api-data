@@ -38,6 +38,21 @@ eBird API Requests function get_taxonomy_locales():
 
     locales = get_taxonomy_locales(settings.EBIRD_API_KEY)
 
+The eBird API limits how quickly requests can be made. If the limit is exceeded,
+the API responds with HTTP 429 Too Many Requests. To avoid this, the loader waits
+a minimum interval, 1 second by default, between requests. The same interval is
+used between requests to scrape checklist web pages, to get the observer's eBird
+user id. You can change the interval, in seconds, in your Django settings:
+
+.. code-block:: python
+
+    EBIRD_RATE_LIMIT = 2.0
+
+If the API still responds with HTTP 429, the request is retried, after waiting
+for the time given by eBird, and the interval is doubled, up to 60 seconds, for
+the rest of the run. If the request still fails, the loader stops. Any checklists
+that were missed will be added the next time the loader is run.
+
 Now, it is time to load some checklists:
 
 .. code-block:: console

@@ -121,7 +121,8 @@ class Command(BaseCommand):
     def get_loader() -> APILoader:
         key: str = getattr(settings, "EBIRD_API_KEY")
         locales: dict = getattr(settings, "EBIRD_LOCALES")
-        return APILoader(key, locales)
+        rate_limit: float | None = getattr(settings, "EBIRD_RATE_LIMIT", None)
+        return APILoader(key, locales, rate_limit=rate_limit)
 
     def handle(self, *args, **options):
         date = options["date"] or dt.date.today()

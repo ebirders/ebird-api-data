@@ -303,7 +303,8 @@ class FetchSpeciesView(PermissionRequiredMixin, generic.FormView):
         species_code = form.cleaned_data["species_code"]
         key: str = getattr(settings, "EBIRD_API_KEY")
         locales: dict = getattr(settings, "EBIRD_LOCALES")
-        loader = APILoader(key, locales)
+        rate_limit: float | None = getattr(settings, "EBIRD_RATE_LIMIT", None)
+        loader = APILoader(key, locales, rate_limit=rate_limit)
         species = loader.add_species(species_code)
         messages.add_message(
             self.request,
