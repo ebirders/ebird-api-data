@@ -144,7 +144,19 @@ class APILoader:
         return self.call(func, self.api_key, *args, **kwargs)
 
     @staticmethod
-    def get_country(data: dict) -> Country:
+    def update(obj, values: dict) -> bool:
+        ignored = ["added", "edited"]  # Don't log timestamp changes
+        updated = False
+        for key, value in values.items():
+            current = getattr(obj, key)
+            if current != value:
+                setattr(obj, key, value)
+                updated = True
+                if key not in ignored:
+                    logger.info("Attribute Changed: %s, %s -> %s", key, current, value)
+        return updated
+
+    def get_country(self, data: dict) -> Country:
         code: str = data["countryCode"]
         values: dict = {
             "name": data["countryName"],
@@ -153,10 +165,12 @@ class APILoader:
         country, created = Country.objects.get_or_create(code=code, defaults=values)
         if created:
             logger.info("Added country: %s, %s", code, values["name"])
+        elif self.update(country, values):
+            logger.info("Updated country: %s", code)
+            country.save()
         return country
 
-    @staticmethod
-    def get_state(data: dict) -> State:
+    def get_state(self, data: dict) -> State:
         code: str = data["subnational1Code"]
         values: dict = {
             "name": data["subnational1Name"],
@@ -165,10 +179,12 @@ class APILoader:
         state, created = State.objects.get_or_create(code=code, defaults=values)
         if created:
             logger.info("Added state: %s, %s", code, values["name"])
+        elif self.update(state, values):
+            logger.info("Updated state: %s", code)
+            state.save()
         return state
 
-    @staticmethod
-    def get_county(data) -> County:
+    def get_county(self, data) -> County:
         code: str = data["subnational2Code"]
         values: dict = {
             "name": data["subnational2Name"],
@@ -178,6 +194,9 @@ class APILoader:
         county, created = County.objects.get_or_create(code=code, defaults=values)
         if created:
             logger.info("Added county: %s, %s", code, values["name"])
+        elif self.update(county, values):
+            logger.info("Updated county: %s", code)
+            county.save()
         return county
 
     def add_location(self, data: dict) -> Location:
@@ -185,7 +204,6 @@ class APILoader:
         location: Location
 
         values: dict = {
-            "identifier": identifier,
             "name": data["name"],
             "original": data["name"],
             "country": self.get_country(data),
@@ -200,8 +218,18 @@ class APILoader:
         if "subnational2Code" in data:
             values["county"] = self.get_county(data)
 
-        location = Location.objects.create(**values)
-        logger.info("Added location: %s, %s", identifier, location.name)
+        location, created = Location.objects.get_or_create(
+            identifier=identifier, defaults=values
+        )
+
+        if not created:
+            values.pop("name") # Don't overwrite the name
+
+        if created:
+            logger.info("Added location: %s, %s", identifier, location.name)
+        elif self.update(location, values):
+            logger.info("Updated location: %s", identifier)
+            location.save()
         return location
 
     def add_species(self, code: str) -> Species:
@@ -247,7 +275,7 @@ class APILoader:
     def get_urn(project_id, row: dict) -> str:
         return f"URN:CornellLabOfOrnithology:{project_id}:{row['obsId']}"
 
-    def add_observation(self, data: dict, checklist: Checklist) -> Observation:
+    def get_observation(self, data: dict, checklist: Checklist) -> Observation:
         identifier: str = data["obsId"]
         observation: Observation
         species: Species = self.get_species(data)
@@ -284,8 +312,15 @@ class APILoader:
         if "comments" in data:
             values["comments"] = data["comments"]
 
-        observation = Observation.objects.create(identifier=identifier, **values)
-
+        observation, created = Observation.objects.get_or_create(
+            identifier=identifier, defaults=values
+        )
+        # Don't record when an observation is added. It's too noisy.
+        if not created:
+            values.pop("published")
+        if self.update(observation, values):
+            logger.info("Updated observation: %s", identifier)
+            observation.save()
         return observation
 
     def get_observer_identifier(self, data) -> str:
@@ -328,14 +363,12 @@ class APILoader:
 
     def add_checklist(self, identifier: str) -> Checklist | None:
         """
-        Add the checklist with the given identifier.
+        Add or update the checklist with the given identifier.
 
         Arguments:
             identifier: the eBird identifier for the checklist, e.g. "S318722167"
 
         """
-        logger.info("Adding checklist: %s", identifier)
-
         # Make sure loading a checklist is an all or nothing proposition.
         # All the data is available from the eBird API call but there can
         # still be further calls to scrape the checklist web page to get
@@ -344,6 +377,7 @@ class APILoader:
 
         with transaction.atomic():
             data: dict = self.call_api(get_checklist, identifier)
+            logger.info("Downloaded checklist: %s", identifier)
             identifier: str = data["subId"]
             added: dt.datetime = str2datetime(data["creationDt"])
             edited: dt.datetime = str2datetime(data["lastEditedDt"])
@@ -396,10 +430,24 @@ class APILoader:
             if "comments" in data:
                 values["comments"] = data["comments"]
 
-            checklist = Checklist.objects.create(identifier=identifier, **values)
+            checklist, created = Checklist.objects.get_or_create(
+                identifier=identifier, defaults=values
+            )
+            if not created:
+                values.pop("published")
+            if created:
+                logger.info("Added checklist: %s", identifier)
+            elif self.update(checklist, values):
+                logger.info("Updated checklist: %s", identifier)
+                checklist.save()
 
             for observation_data in observations:
-                self.add_observation(observation_data, checklist)
+                self.get_observation(observation_data, checklist)
+
+            for observation in checklist.observations.all():
+                if observation.edited != checklist.edited:
+                    logger.info("Deleted observation: %s", observation.identifier)
+                    observation.delete()
 
         return checklist
 
