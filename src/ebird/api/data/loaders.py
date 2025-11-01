@@ -46,7 +46,9 @@ RETRY_MULTIPLIER: float = 2.0
 
 
 def str2datetime(value: str) -> dt.datetime:
-    return dt.datetime.fromisoformat(value).replace(tzinfo=get_default_timezone())
+    return dt.datetime.fromisoformat(value).replace(
+        tzinfo=get_default_timezone(), second=0, microsecond=0
+    )
 
 
 def random_word(length):
