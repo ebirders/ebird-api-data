@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest
 
+- Updated logging so messages describe the changes to the checklist. That
+  makes them much more readable.
+
 ## 0.4.0 (2025-11-01)
 
 - APILoader can update existing checklists.
