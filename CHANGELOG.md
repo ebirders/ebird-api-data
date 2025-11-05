@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the problem downstream, it is much better for eBird to address it at source.
   Then everybody will benefit from cleaner data.
 
+- Removed the 'multiple' flag from Observer. A cleaner way of dealing with 
+  Observers with multiple names is to prime the database with two Observers
+  that share the same name. That way the APILoader will scrape the checklist
+  web page to obtain the observer identifier, e.g. USER3445322, and so the 
+  checklists will be assigned to the correct observer.
+
 ## 0.4.0 (2025-11-01)
 
 - APILoader can update existing checklists.

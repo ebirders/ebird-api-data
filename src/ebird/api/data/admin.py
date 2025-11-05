@@ -266,10 +266,10 @@ class ObservationAdmin(admin.ModelAdmin):
 
 @admin.register(models.Observer)
 class ObserverAdmin(admin.ModelAdmin):
-    list_display = ("name", "identifier", "multiple", "enabled")
+    list_display = ("name", "identifier", "enabled")
     ordering = ("name",)
     search_fields = ("name", "identifier")
-    list_filter = ("multiple", "enabled")
+    list_filter = ("enabled",)
     form = ObservationForm
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):

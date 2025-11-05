@@ -371,34 +371,45 @@ class APILoader:
         node = soup.find("span", attrs={attribute: True})
         identifier = node[attribute] if node else ""
         if identifier:
-            logger.info("Observer Identifier: %s", identifier)
+            logger.info(
+                "Observer Identifier: %s found", identifier
+            )
         else:
             logger.info("Observer Identifier: not found")
         return identifier
 
     def get_observer(self, data: dict) -> Observer:
+        # In theory, there is a serious problem here, as observers can have
+        # the same name. There is no way to resolve this except to prime the
+        # database with multiple Observers sharing the same name. That will
+        # force the identifier to be scraped from the checklist web page and
+        # so the correct "John Smith" will be used. In practice, apart from
+        # Anonymous eBirder, this is not a problem. Most observers want their
+        # name to be unique (so they show up in the leader boards), and so they
+        # will add middle initials, etc. so the names are generally unique.
+
         name: str = data.get("userDisplayName", "Anonymous eBirder")
-        is_multiple = Observer.objects.filter(original=name, multiple=True).exists()
-        if is_multiple:
+        number_of_observers = Observer.objects.filter(original=name).count()
+
+        if number_of_observers == 0:
+            identifier = self.get_observer_identifier(data)
+            # The observer might have changed their name.
+            observer, created = Observer.objects.update_or_create(
+                identifier=identifier, defaults={"name": name, "original": name}
+            )
+        elif number_of_observers == 1:
+            observer = Observer.objects.get(original=name)
+            identifier = observer.identifier
+            created = False
+        else:
             identifier = self.get_observer_identifier(data)
             observer, created = Observer.objects.get_or_create(
                 identifier=identifier,
-                defaults={"name": name, "original": random_word(8)},
+                defaults={"name": name, "original": name},
             )
-        else:
-            if observer := Observer.objects.filter(original=name).first():
-                created = False
-            else:
-                identifier = self.get_observer_identifier(data)
-                observer, created = Observer.objects.get_or_create(
-                    identifier=identifier,
-                    defaults={"name": name, "original": name},
-                )
 
         if created:
-            logger.info("Observer %s: added, %s", identifier, name)
-            if Observer.objects.filter(original=name).count() > 1:
-                logger.error("Multiple observers exist with same name: %s", name)
+            logger.info("Observer added: %s, %s", identifier, name)
 
         return observer
 
