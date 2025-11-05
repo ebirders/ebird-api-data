@@ -499,7 +499,7 @@ class APILoader:
             if created:
                 logger.info("Checklist %s: added", identifier)
             elif changed := self.update(checklist, values):
-                ignored = ["added", "edited", "url", "comments"]
+                ignored = ["added", "edited", "started", "url", "comments"]
                 filtered = {
                     key: value for key, value in changed.items() if key not in ignored
                 }
