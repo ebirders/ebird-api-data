@@ -1,6 +1,6 @@
 [project]
 name = "ebird-api-data"
-version = "0.4.0"
+version = "0.5.0"
 description = "eBird API Data is a reusable Django app for loading data from eBird into a database."
 keywords = ["checklists", "observations", "species", "Django", "eBird", "models"]
 license = "MIT"
@@ -64,7 +64,7 @@ dev-dependencies = [
 ]
 
 [tool.bumpversion]
-current_version = "0.4.0"
+current_version = "0.5.0"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 ignore_missing_version = false
