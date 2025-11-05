@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Latest
 
 - Updated logging so messages describe the changes to the checklist. That
-  makes them much more readable.
+  makes them much more readable. 
+
+- Removed the Filter model. Originally the idea was to apply some editorial
+  oversight on the records, either moderating some of the more unlikely 
+  observations, or changing species to their domesticated forms to avoid 
+  polluting the year list. However the number of "errors" in the data is 
+  simply too great. First the fields for flagging unusual observations were
+  removed in an earlier implementation, but the filtering (rewriting) of 
+  species was kept. Now the filtering is removed. Instead of trying to address
+  the problem downstream, it is much better for eBird to address it at source.
+  Then everybody will benefit from cleaner data.
 
 ## 0.4.0 (2025-11-01)
 

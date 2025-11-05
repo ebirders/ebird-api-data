@@ -25,7 +25,6 @@ from .models import (
     Checklist,
     Country,
     County,
-    Filter,
     Location,
     Observation,
     Observer,
@@ -288,7 +287,6 @@ class APILoader:
 
         values: dict = {
             "edited": checklist.edited,
-            "published": False,
             "checklist": checklist,
             "country": checklist.country,
             "state": checklist.state,
@@ -330,9 +328,6 @@ class APILoader:
                 species,
                 values["count"],
             )
-
-        if not created:
-            values.pop("published")
 
         if changed := self.update(observation, values):
             for field in ["audio", "photo", "video"]:
@@ -438,7 +433,6 @@ class APILoader:
             values: dict = {
                 "added": added,
                 "edited": edited,
-                "published": False,
                 "country": location.country,
                 "state": location.state,
                 "county": location.county,
@@ -491,13 +485,10 @@ class APILoader:
                 identifier=identifier, defaults=values
             )
 
-            if not created:
-                values.pop("published")
-
             if created:
                 logger.info("Checklist %s: added", identifier)
             elif changed := self.update(checklist, values):
-                ignored = ["added", "edited", "published", "url", "comments"]
+                ignored = ["added", "edited", "url", "comments"]
                 filtered = {
                     key: value for key, value in changed.items() if key not in ignored
                 }
@@ -599,19 +590,4 @@ class APILoader:
                 continue
             self.add_checklist(identifier)
 
-        self.run_filters()
-        self.publish()
-
         logger.info("Added checklists: %s, %s", region, date.strftime("%Y-%m-%d"))
-
-    @staticmethod
-    def run_filters():
-        for filter in Filter.objects.filter(enabled=True):
-            logger.info("Applying filter: %s", filter.name)
-            count = filter.apply()
-            logger.info("Observations updated: %d", count)
-
-    @staticmethod
-    def publish():
-        Checklist.objects.filter(published=False).update(published=True)
-        Observation.objects.filter(published=False).update(published=True)

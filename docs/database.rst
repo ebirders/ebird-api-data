@@ -19,7 +19,6 @@ The lightning tour in 20 seconds:
 * A Location has a Country.
 * A Location has a State.
 * A Location has a County.
-* A Filter updates newly loaded Observations.
 
 Notes
 -----
@@ -208,14 +207,5 @@ Notes
    eBird adds coordinates to the names of incidental locations, with
    different platforms, and possibly countries, adding coordinates
    in different formats.
-
-8. The Filters are used to change the species on newly loaded Observations.
-   The most common use is changing a species such as Indian Peafowl, to it's
-   domestic equivalent Indian Peafowl (Domestic type) - in countries where it
-   does not occur naturally, of course.
-
-   You can also change the species for specific Locations. That makes it easy
-   to change observations of Graylag Goose in urban parks and gardens into the
-   domestic form.
 
 .. _eBirders PT: https://www.ebirders.pt/
