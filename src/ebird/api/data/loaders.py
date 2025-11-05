@@ -227,7 +227,7 @@ class APILoader:
             values.pop("name")  # Don't overwrite the name
 
         if created:
-            logger.info("Location %s: added, %s", identifier, values["name"])
+            logger.info("Location %s: added %s", identifier, values["name"])
         elif changed := self.update(location, values):
             included = ["name", "hotspot", "county", "state", "country"]
             filtered = {key: value for key, value in changed.items() if key in included}
@@ -265,7 +265,7 @@ class APILoader:
         values["family_common_name"] = json.dumps(values["family_common_name"])
 
         species = Species.objects.create(species_code=code, **values)
-        logger.info("Species %s: added, %s", code, species.get_common_name())
+        logger.info("Species added: %s, %s", code, species.get_common_name())
 
         return species
 
@@ -323,7 +323,7 @@ class APILoader:
         # Log observations that were added after the checklist was first loaded.
         if created and checklist.created < checklist.edited:
             logger.info(
-                "Checklist %s: added, %s (%d)",
+                "Checklist %s: added %s (%d)",
                 checklist.identifier,
                 species,
                 values["count"],
@@ -337,13 +337,13 @@ class APILoader:
                         "Checklist %s: %s, %s %s",
                         checklist.identifier,
                         species,
-                        field,
                         "added" if new else "deleted",
+                        field,
                     )
             if "count" in changed:
                 old, new = changed["count"]
                 logger.info(
-                    "Checklist %s: %s, count, %s -> %s",
+                    "Checklist %s: %s, changed count, %s -> %s",
                     checklist.identifier,
                     species,
                     old,
@@ -352,7 +352,7 @@ class APILoader:
             if "species" in changed:
                 old, new = changed["species"]
                 logger.info(
-                    "Checklist %s: species, %s -> %s",
+                    "Checklist %s: changed species, %s -> %s",
                     checklist.identifier,
                     old,
                     new,
@@ -360,22 +360,18 @@ class APILoader:
         return observation
 
     def get_observer_identifier(self, data) -> str:
-        identifier: str = data["subId"]
-        logger.info("Scraping checklist: %s", identifier)
+        checklist_identifier: str = data["subId"]
+        logger.info("Scraping checklist: %s", checklist_identifier)
         response = self.call(
-            requests.get, "https://ebird.org/checklist/%s" % identifier
+            requests.get, "https://ebird.org/checklist/%s" % checklist_identifier
         )
         content = response.content
         soup = BeautifulSoup(content, "lxml")
         attribute = "data-participant-userid"
         node = soup.find("span", attrs={attribute: True})
         identifier = node[attribute] if node else ""
-        if identifier:
-            logger.info(
-                "Observer Identifier: %s found", identifier
-            )
-        else:
-            logger.info("Observer Identifier: not found")
+        if not identifier:
+            logger.error("Observer Identifier: not found")
         return identifier
 
     def get_observer(self, data: dict) -> Observer:
@@ -409,7 +405,7 @@ class APILoader:
             )
 
         if created:
-            logger.info("Observer added: %s, %s", identifier, name)
+            logger.info("Observer added: %s (%s)", name, identifier)
 
         return observer
 
@@ -503,6 +499,16 @@ class APILoader:
                 filtered = {
                     key: value for key, value in changed.items() if key not in ignored
                 }
+                if "observer" in filtered:
+                    old, new = filtered.pop("observer")
+                    logger.info(
+                        "Checklist %s: changed observer, %s (%s) -> %s (%s)",
+                        identifier,
+                        old.name,
+                        old.identifier,
+                        new.name,
+                        new.identifier
+                    )
                 for key, (old, new) in filtered.items():
                     logger.info(
                         "Checklist %s: changed %s, %s -> %s",
