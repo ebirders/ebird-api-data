@@ -5,6 +5,8 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.0.0
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Latest
+
+## 0.5.1 (2026-06-14)
 - Upgrade ebird-api-requests so requests are retried if an error occurs.
 
 ## 0.5.0 (2025-11-05)
