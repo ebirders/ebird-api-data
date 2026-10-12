@@ -5,6 +5,13 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.0.0
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Latest
+- Added the repair_observers management command, to reassign the checklists
+  saved to a single Observer, with an empty identifier, when scraping the
+  checklist web page for the observer's eBird user id stopped working.
+  Run it once, after upgrading: python manage.py repair_observers
+- The loader no longer retries requests when the eBird API returns an error,
+  since ebird-api-requests already retries them. Connection errors and
+  timeouts are still retried.
 - Upgrade ebird-api-requests to 4.3.1, and set a minimum interval between
   requests, to avoid HTTP 429 Too Many Requests errors from the eBird API.
   The interval defaults to 1 second and can be changed with the

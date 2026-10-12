@@ -93,6 +93,22 @@ the changes. You are unlikely to catch moderator requested changes but you will
 catch most cases where the observer has made misidentification or entered the
 wrong species.
 
+The eBird API only identifies observers by name. When an observer is added, their
+eBird user id, e.g. USER59111, is found by fetching the Top 100 observers for the
+location, on the date of the checklist. Observers can choose not to appear in the
+Top 100, so if the user id cannot be found, the Observer is given a generated
+identifier, e.g. UNKNOWN-ABCDEFG.
+
+Up to version 0.5.2, the user id was scraped from the checklist web page. When
+eBird started blocking bots, every new observer was saved to the same Observer
+record, with an empty identifier. If you used an earlier version, run the
+repair_observers management command, once, to reassign the checklists:
+
+.. code-block:: console
+
+    python manage.py repair_observers --dry-run
+    python manage.py repair_observers
+
 You should really treat the API as a news service, and accept that there will be
 gaps in the data. For accuracy and completeness, sign up to get access to the eBird
 Basic Dataset, which is published on the 15th of each month.
