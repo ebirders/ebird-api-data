@@ -39,6 +39,11 @@ def test_add_view(admin_client, model):
 @pytest.mark.parametrize("model", models)
 def test_change_view(admin_client, model):
     obj = model._default_manager.last()
+    if obj is None:
+        pytest.skip(
+            "No %s records. Load some checklists first, using the "
+            "add_checklists management command." % model.__name__
+        )
     url = reverse("admin:data_%s_change" % model.__name__.lower(), args=(obj.pk,))
     response = admin_client.get(url)
     assert response.status_code == 200
