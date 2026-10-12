@@ -12,7 +12,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "django>=4.2",
-    "ebird-api-requests>=4.3.0",
+    "ebird-api-requests>=4.3.1",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
