@@ -15,14 +15,12 @@ from urllib.error import HTTPError, URLError
 from django.db import transaction
 from django.utils.timezone import get_default_timezone
 
-import requests
-
-from bs4 import BeautifulSoup
 from ebird.api.requests import (
     RateLimitError,
     get_checklist,
     get_regions,
     get_taxonomy,
+    get_top_100,
     get_visits,
     set_rate_limit,
 )
@@ -49,7 +47,7 @@ RETRY_LIMIT: int = 10
 RETRY_WAIT: int = 2
 # Multiplier to apply to wait time after each failed attempt
 RETRY_MULTIPLIER: float = 2.0
-# Minimum time, in seconds, between requests to the eBird API or web site
+# Minimum time, in seconds, between requests to the eBird API
 RATE_LIMIT: float = 1.0
 
 
@@ -80,8 +78,7 @@ class APILoader:
                  selected by the user.
 
         limit: The total number of retries that can be attempted when calling
-               the API or scraping a web page. Defaults to RETRY_LIMIT if not
-               set.
+               the API. Defaults to RETRY_LIMIT if not set.
 
         wait: The initial number of seconds to wait. Defaults to RETRY_WAIT
               if not set.
@@ -90,8 +87,7 @@ class APILoader:
                     Defaults to RETRY_MULTIPLIER if not set.
 
         rate_limit: The minimum time, in seconds, between requests to the
-                    eBird API, and between requests to scrape checklist web
-                    pages. Defaults to RATE_LIMIT if not set. Zero disables
+                    eBird API. Defaults to RATE_LIMIT if not set. Zero disables
                     rate limiting.
 
     The eBird API limits the number of records returned to 200. When downloading
@@ -104,8 +100,8 @@ class APILoader:
     AT HOME. Even if you don't get banned, if you melt the eBird servers, then
     karma will ensure bad things happen to you.
 
-    The loader uses a budget for retry attempts when calling the eBird API or
-    fetching a web page. After each failure, a wait is applied, which increases
+    The loader uses a budget for retry attempts when calling the eBird API.
+    After each failure, a wait is applied, which increases
     after each attempt. Once the total number of retries is reached, no
     further attempts are made. You can set the number of retries, the initial
     wait, and the multiplier when creating an APILoader object, otherwise
@@ -149,7 +145,6 @@ class APILoader:
         self.retry_wait: int = wait if wait else RETRY_WAIT
         self.retry_multiplier: float = multiplier if multiplier else RETRY_MULTIPLIER
         self.rate_limit: float = RATE_LIMIT if rate_limit is None else rate_limit
-        self.last_scrape: float | None = None
         set_rate_limit(self.rate_limit)
 
     def call(self, func, *args, **kwargs):
@@ -160,7 +155,7 @@ class APILoader:
             except RateLimitError:
                 logger.exception("Rate limit exceeded")
                 raise
-            except (URLError, HTTPError, requests.RequestException) as err:
+            except (URLError, HTTPError) as err:
                 logger.exception("Failed call #%d", self.retries)
                 self.retries += 1
                 if self.retries > self.retry_limit:
@@ -171,16 +166,6 @@ class APILoader:
 
     def call_api(self, func, *args, **kwargs) -> dict | list:
         return self.call(func, self.api_key, *args, **kwargs)
-
-    def scrape(self, url: str) -> requests.Response:
-        if self.rate_limit and self.last_scrape is not None:
-            delay = self.rate_limit - (time.monotonic() - self.last_scrape)
-            if delay > 0:
-                time.sleep(delay)
-        self.last_scrape = time.monotonic()
-        response = requests.get(url)
-        response.raise_for_status()
-        return response
 
     @staticmethod
     def update(obj, values: dict) -> dict[str, tuple]:
@@ -399,27 +384,55 @@ class APILoader:
                 )
         return observation
 
-    def get_observer_identifier(self, data) -> str:
+    def get_observer_identifier(self, data: dict) -> str:
+        # The checklist only contains the observer's name. The only place the
+        # eBird API returns the observer's identifier, e.g. USER59111, is the
+        # Top 100 for a region or location. Fetching the Top 100 for the
+        # location, on the date of the checklist, returns a short list, so
+        # the name will almost always be unique. The userId field is not
+        # documented, so it might be removed at some point.
         checklist_identifier: str = data["subId"]
-        logger.info("Scraping checklist: %s", checklist_identifier)
-        response = self.call(
-            self.scrape, "https://ebird.org/checklist/%s" % checklist_identifier
-        )
-        content = response.content
-        soup = BeautifulSoup(content, "lxml")
-        attribute = "data-participant-userid"
-        node = soup.find("span", attrs={attribute: True})
-        identifier = node[attribute] if node else ""
-        if not identifier:
-            logger.error("Observer Identifier: not found")
-        return identifier
+        name: str = data.get("userDisplayName", "Anonymous eBirder")
+        location: str = data["locId"]
+        date: dt.date = str2datetime(data["obsDt"]).date()
+
+        entries: list = self.call_api(get_top_100, location, date)
+        identifiers: set = {
+            entry["userId"]
+            for entry in entries
+            if entry.get("userDisplayName") == name and entry.get("userId")
+        }
+
+        if len(identifiers) == 1:
+            return identifiers.pop()
+
+        if identifiers:
+            logger.warning(
+                "Checklist %s: observer %s is not unique at %s on %s",
+                checklist_identifier,
+                name,
+                location,
+                date,
+            )
+        else:
+            logger.warning(
+                "Checklist %s: identifier for observer %s not found",
+                checklist_identifier,
+                name,
+            )
+        return ""
+
+    @staticmethod
+    def generate_observer_identifier() -> str:
+        # Use a prefix which will not clash with eBird's USER identifiers.
+        return "UNKNOWN-%s" % random_word(7).upper()
 
     def get_observer(self, data: dict) -> Observer:
         # In theory, there is a serious problem here, as observers can have
         # the same name. There is no way to resolve this except to prime the
         # database with multiple Observers sharing the same name. That will
-        # force the identifier to be scraped from the checklist web page and
-        # so the correct "John Smith" will be used. In practice, apart from
+        # force the identifier to be fetched from the eBird API and so the
+        # correct "John Smith" will be used. In practice, apart from
         # Anonymous eBirder, this is not a problem. Most observers want their
         # name to be unique (so they show up in the leader boards), and so they
         # will add middle initials, etc. so the names are generally unique.
@@ -428,20 +441,39 @@ class APILoader:
         number_of_observers = Observer.objects.filter(original=name).count()
 
         if number_of_observers == 0:
-            identifier = self.get_observer_identifier(data)
-            # The observer might have changed their name.
-            observer, created = Observer.objects.update_or_create(
-                identifier=identifier, defaults={"name": name, "original": name}
-            )
+            if identifier := self.get_observer_identifier(data):
+                # The observer might have changed their name.
+                observer, created = Observer.objects.update_or_create(
+                    identifier=identifier, defaults={"name": name, "original": name}
+                )
+            else:
+                identifier = self.generate_observer_identifier()
+                observer = Observer.objects.create(
+                    identifier=identifier, name=name, original=name
+                )
+                created = True
         elif number_of_observers == 1:
             observer = Observer.objects.get(original=name)
             identifier = observer.identifier
             created = False
-        else:
-            identifier = self.get_observer_identifier(data)
+        elif identifier := self.get_observer_identifier(data):
             observer, created = Observer.objects.get_or_create(
                 identifier=identifier,
                 defaults={"name": name, "original": name},
+            )
+        else:
+            # There is no way to tell which observer submitted the checklist
+            # so use the first one added.
+            observer = (
+                Observer.objects.filter(original=name).order_by("created").first()
+            )
+            identifier = observer.identifier
+            created = False
+            logger.warning(
+                "Checklist %s: assigned to observer %s (%s)",
+                data["subId"],
+                name,
+                identifier,
             )
 
         if created:
@@ -459,9 +491,8 @@ class APILoader:
         """
         # Make sure loading a checklist is an all or nothing proposition.
         # All the data is available from the eBird API call but there can
-        # still be further calls to scrape the checklist web page to get
-        # identifier of the observer, or the eBird API when a new species
-        # is added.
+        # still be further calls to the eBird API to get the identifier of
+        # the observer, or when a new species is added.
 
         with transaction.atomic():
             data: dict = self.call_api(get_checklist, identifier)

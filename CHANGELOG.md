@@ -11,9 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   EBIRD_RATE_LIMIT setting, or the rate_limit argument to APILoader.
 - The loader stops if the eBird API still responds with HTTP 429 after
   all the retries in ebird-api-requests have been used.
-- Requests to scrape checklist web pages also use the minimum interval.
-  An error response is now retried, instead of saving the observer with
-  an empty identifier.
+- The observer's eBird user id is now fetched from the Top 100 observers
+  for the checklist location, on the date of the checklist, instead of
+  scraping the checklist web page. eBird now blocks requests from bots,
+  so the identifier was empty and new observers were all saved to the same
+  Observer record. If the identifier cannot be found, a new observer is
+  given a generated identifier, e.g. UNKNOWN-ABCDEFG.
+- Removed the dependencies on beautifulsoup4 and lxml.
 
 ## 0.5.2 (2026-10-10)
 - Update ebird-api-requests to handle an eBird API change when fetching

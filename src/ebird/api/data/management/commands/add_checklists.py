@@ -65,8 +65,8 @@ Notes:
     3. The API has limitations. Observers are only identified by name. So if there
        are two Juan Garcias birding in a region, then all the observations will
        appear to belong to one person. To work around this, when an observer is
-       added the web page for the checklist is scraped to extract their eBird
-       user id.
+       added, their eBird user id is found by fetching the Top 100 observers for
+       the location, on the date of the checklist.
 
        Also the observations will not have been reviewed by moderators, so there
        are likely to be records where the identification is incorrect.

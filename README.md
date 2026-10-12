@@ -136,8 +136,12 @@ be assigned to them. In practice, most people ensure their name is unique by
 adding middle initial's etc. However it is a problem with "Anonymous eBirder".
 The solution is to add two Observer records with the name "Anonymous eBirder",
 and a fake identifier, e.g. ANON1, ANON2, etc. That way the loader will first 
-scrape the web page for the checklist where the identifier, e.g. USER2743448, 
-can be found, and so the checklist will be assigned to the correct Observer. 
+fetch the Top 100 observers for the checklist location, on the date of the
+checklist, where the identifier, e.g. USER2743448, can be found, and so the
+checklist will be assigned to the correct Observer. If the identifier cannot
+be found, e.g. two observers with the same name submitted checklists at the
+same location on the same day, the checklist is assigned to the first
+Observer added with that name.
 Use this workaround for any other observers you encounter that share the same 
 name. This won't work retroactively, but then you can delete the checklists, 
 and manually reload them.
