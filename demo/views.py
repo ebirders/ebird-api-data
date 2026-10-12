@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import F, Q, Window
+from django.db.models import F, Window
 from django.db.models.functions import RowNumber
 from django.forms.widgets import Media
 from django.http import HttpResponseRedirect
@@ -150,7 +150,6 @@ class FilteredListView(FormsMixin, generic.ListView):
 
 
 class ChecklistsView(FilteredListView):
-    default_filter = Q(published=True)
     form_classes = [
         LocationFilter,
         ObserverFilter,
@@ -181,7 +180,6 @@ class ChecklistsView(FilteredListView):
 
 
 class ObservationsView(FilteredListView):
-    default_filter = Q(published=True)
     form_classes = (
         LocationFilter,
         ObserverFilter,
@@ -213,7 +211,6 @@ class ObservationsView(FilteredListView):
 
 
 class SpeciesView(FilteredListView):
-    default_filter = Q(published=True)
     form_classes = (
         LocationFilter,
         ObserverFilter,
