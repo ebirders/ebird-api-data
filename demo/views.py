@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import Q
+from django.db.models import F, Q, Window
+from django.db.models.functions import RowNumber
 from django.forms.widgets import Media
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -238,7 +239,16 @@ class SpeciesView(FilteredListView):
         ]
 
     def get_filtered_queryset(self, forms):
-        return super().get_filtered_queryset(forms).distinct("species")
+        # Select the first observation of each species. A window function is
+        # used, instead of distinct("species"), since DISTINCT ON is only
+        # supported by PostgreSQL.
+        first_seen = Window(
+            RowNumber(),
+            partition_by=F("species"),
+            order_by=[F("started").asc(), F("pk").asc()],
+        )
+        queryset = super().get_filtered_queryset(forms)
+        return queryset.annotate(row_number=first_seen).filter(row_number=1)
 
     def get_translated_urls(self):
         urls = []
