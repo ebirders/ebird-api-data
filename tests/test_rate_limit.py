@@ -49,7 +49,24 @@ def test_rate_limit_error_is_not_retried(mock_sleep, loader):
 
 
 @patch("ebird.api.data.loaders.time.sleep")
-def test_other_errors_are_retried(mock_sleep, loader):
+def test_http_errors_are_not_retried(mock_sleep, loader):
+    func = MagicMock(side_effect=make_error(500))
+    with pytest.raises(HTTPError):
+        loader.call(func)
+    assert func.call_count == 1
+    assert loader.retries == 0
+    mock_sleep.assert_not_called()
+
+
+@patch("ebird.api.data.loaders.time.sleep")
+def test_connection_errors_are_retried(mock_sleep, loader):
     func = MagicMock(side_effect=[URLError("timeout"), "ok"])
+    assert loader.call(func) == "ok"
+    assert loader.retries == 1
+
+
+@patch("ebird.api.data.loaders.time.sleep")
+def test_timeouts_are_retried(mock_sleep, loader):
+    func = MagicMock(side_effect=[TimeoutError(), "ok"])
     assert loader.call(func) == "ok"
     assert loader.retries == 1

@@ -77,8 +77,9 @@ class APILoader:
                  common name, family name, etc. is displayed in the language
                  selected by the user.
 
-        limit: The total number of retries that can be attempted when calling
-               the API. Defaults to RETRY_LIMIT if not set.
+        limit: The total number of retries that can be attempted when the
+               connection to the eBird API fails. Defaults to RETRY_LIMIT if
+               not set.
 
         wait: The initial number of seconds to wait. Defaults to RETRY_WAIT
               if not set.
@@ -100,9 +101,9 @@ class APILoader:
     AT HOME. Even if you don't get banned, if you melt the eBird servers, then
     karma will ensure bad things happen to you.
 
-    The loader uses a budget for retry attempts when calling the eBird API.
-    After each failure, a wait is applied, which increases
-    after each attempt. Once the total number of retries is reached, no
+    The loader uses a budget for retry attempts when the connection to the
+    eBird API fails, e.g. a timeout. After each failure, a wait is applied,
+    which increases after each attempt. Once the total number of retries is reached, no
     further attempts are made. You can set the number of retries, the initial
     wait, and the multiplier when creating an APILoader object, otherwise
     sensible defaults are used.
@@ -117,6 +118,10 @@ class APILoader:
     limit to 3, as then, successive errors will usually mean something serious
     is wrong with the network, or the eBird servers are overloaded, and you
     should stop from making the situation any worse.
+
+    Errors returned by the eBird API, e.g. HTTP 500 Internal Server Error,
+    are not retried by the loader since ebird-api-requests already retries
+    the request, with exponential back-off, before raising an HTTPError.
 
     The eBird API also limits how quickly requests can be made. The loader
     sets a rate limit, using set_rate_limit() from ebird-api-requests, so
@@ -155,7 +160,10 @@ class APILoader:
             except RateLimitError:
                 logger.exception("Rate limit exceeded")
                 raise
-            except (URLError, HTTPError) as err:
+            except HTTPError:
+                # ebird-api-requests has already retried the request.
+                raise
+            except (URLError, TimeoutError) as err:
                 logger.exception("Failed call #%d", self.retries)
                 self.retries += 1
                 if self.retries > self.retry_limit:
