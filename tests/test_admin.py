@@ -10,7 +10,6 @@ models = [
     models.Checklist,
     models.Country,
     models.County,
-    models.Filter,
     models.Location,
     models.Observation,
     models.Observer,
